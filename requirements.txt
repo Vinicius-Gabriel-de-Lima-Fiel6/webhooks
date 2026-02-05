@@ -1,5 +1,5 @@
 streamlit
-streamlit-drawable-canvas-fix # Use este pacote atualizado
+streamlit-drawable-canvas-fix
 Pillow
 pandas
 numpy
