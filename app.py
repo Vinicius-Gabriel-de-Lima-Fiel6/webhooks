@@ -1,42 +1,36 @@
 import streamlit as st
-from streamlit_drawable_canvas import st_canvas # pip install streamlit-drawable-canvas
+from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-import pandas as pd
+import requests
+from io import BytesIO
 
-st.set_page_config(layout="wide")
-st.title("🕹️ Painel de Controle Digital Twin 2D")
+st.title("Digital Twin 2D - Cloud Version")
 
-# 1. Imagem do Sistema (Simulando o diagrama do seu projeto físico)
-# Usando uma imagem de exemplo de um motor industrial
-img_url = "https://raw.githubusercontent.com"
+# URL da imagem (exemplo: diagrama de um motor ou circuito)
+URL_IMAGEM = "https://upload.wikimedia.org"
 
-st.sidebar.info("Clique nas partes do motor para interagir com o hardware real.")
+@st.cache_data
+def load_image(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content)).convert("RGB")
 
-# 2. Configuração do Canvas (Interface Clicável)
+bg_image = load_image(URL_IMAGEM)
+
+# Interface Interativa
 canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",  # Cor do destaque ao clicar
-    stroke_width=3,
-    background_image=Image.open(st.download_button("Baixe a imagem base", img_url) if False else Image.new('RGB', (600, 400), (200,200,200))), # Simulação simplificada
+    fill_color="rgba(255, 165, 0, 0.3)",
+    stroke_width=2,
+    background_image=bg_image,
     update_streamlit=True,
     height=400,
     width=600,
-    drawing_mode="point", # Modo de clique em pontos
+    drawing_mode="rect", # 'rect' para selecionar áreas ou 'point' para botões
     key="canvas",
 )
 
-# 3. Mapeamento de Coordenadas (Onde estão os botões na sua imagem?)
-# Exemplo: Motor (x: 100-300, y: 100-300)
 if canvas_result.json_data is not None:
-    objects = canvas_result.json_data["objects"]
-    if objects:
-        pos = objects[-1] # Pega o último clique
-        x, y = pos["left"], pos["top"]
-        
-        st.sidebar.write(f"Coordenadas do clique: X={x}, Y={y}")
-
-        # LÓGICA DE CONTROLE REAL
-        if 150 < x < 450 and 100 < y < 300: # Se clicou no corpo do motor
-            st.success("🔥 Comando Enviado: Iniciando Ciclo do Motor!")
-            # Aqui você inseriria o comando MQTT: client.publish("motor/power", "ON")
-        elif x < 100:
-            st.warning("🛠️ Abrindo Painel de Manutenção...")
+    # Lógica para ler os cliques/objetos desenhados
+    objetos = canvas_result.json_data["objects"]
+    if objetos:
+        st.write("Interação detectada no hardware!")
+        # Envie seu comando MQTT aqui
