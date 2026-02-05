@@ -1,7 +1,8 @@
 streamlit
 streamlit-drawable-canvas
 Pillow
-paho-mqtt
 pandas
 numpy
+paho-mqtt
+plotly
 requests
