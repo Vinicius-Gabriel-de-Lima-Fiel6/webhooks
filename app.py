@@ -1,68 +1,72 @@
 import streamlit as st
 import pandas as pd
-import json
+import time
 from datetime import datetime
 
-# 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(page_title="BioTech SaaS 4.0", layout="wide")
+# CONFIGURAÇÃO DE INTERFACE INDUSTRIAL
+st.set_page_config(page_title="BioTech OS | Automação 4.0", layout="wide")
 
-# 2. BANCO DE DADOS EM MEMÓRIA (PERSISTENTE NA SESSÃO)
-if 'estoque' not in st.session_state:
-    st.session_state.estoque = pd.DataFrame([
-        {"RFID": "EPC-101", "Produto": "Amoxicilina 500mg", "Status": "Disponível"},
-        {"RFID": "EPC-102", "Produto": "Insulina Glargina", "Status": "Disponível"},
-        {"RFID": "EPC-103", "Produto": "Reagente PCR-X", "Status": "Disponível"}
+# SIMULAÇÃO DE HARDWARE (BANCO DE DADOS DA UNIDADE)
+if 'dispositivos' not in st.session_state:
+    st.session_state.dispositivos = {
+        "Portal RFID": "Online",
+        "Geladeira Inteligente": "Online",
+        "Braço Robótico": "Standby"
+    }
+
+if 'estoque_interno' not in st.session_state:
+    st.session_state.estoque_interno = pd.DataFrame([
+        {"ID_RFID": "1001A", "Item": "Reagente Bio-X", "Local": "Gaveta 01", "Temp": "4.2°C", "Status": "Ok"},
+        {"ID_RFID": "1002B", "Item": "Vacina Gripe", "Local": "Geladeira 02", "Temp": "3.8°C", "Status": "Ok"},
+        {"ID_RFID": "1003C", "Item": "Insulina R", "Local": "Geladeira 02", "Temp": "4.0°C", "Status": "Ok"}
     ])
 
-if 'logs' not in st.session_state:
-    st.session_state.logs = []
+# --- HEADER INDUSTRIAL ---
+st.title("📟 BioTech Operating System")
+st.subheader("Automação Interna de Farmácia e Laboratório")
 
-# 3. INTERFACE EM COLUNAS
-st.title("🛡️ BioTech SaaS: Hub de Saúde Interoperável")
-col_medico, col_farmacia = st.columns([1, 2])
+# --- BARRA LATERAL: CONTROLE DE HARDWARE ---
+with st.sidebar:
+    st.header("⚙️ Status do Hardware")
+    for disp, status in st.session_state.dispositivos.items():
+        st.status(f"{disp}: {status}", state="complete" if status == "Online" else "error")
+    
+    st.divider()
+    st.header("📥 Entrada de Matéria-Prima")
+    if st.button("Escanear Novo Lote (RFID)"):
+        with st.spinner("Processando XML da NFe e IDs RFID..."):
+            time.sleep(2)
+            st.success("Lote Integrado com Sucesso!")
 
-# --- COLUNA 1: O MÉDICO (EMISSOR) ---
-with col_medico:
-    st.header("👨‍⚕️ Prontuário Médico")
+# --- CORPO PRINCIPAL: OPERAÇÃO AUTÔNOMA ---
+col_mapa, col_alertas = st.columns([2, 1])
+
+with col_mapa:
+    st.write("### 📍 Rastreabilidade Interna em Tempo Real")
+    # Aqui o diferencial: Monitoramento de temperatura POR ITEM
+    st.dataframe(st.session_state.estoque_interno, use_container_width=True)
+    
+    if st.button("Executar Inventário Cego Autônomo"):
+        st.write("🤖 Robô iniciando varredura de prateleiras...")
+        bar = st.progress(0)
+        for i in range(100):
+            time.sleep(0.02)
+            bar.progress(i + 1)
+        st.success("Inventário concluído: 100% de acurácia entre Físico vs Sistema.")
+
+with col_alertas:
+    st.write("### ⚠️ Gestão de Riscos (IA)")
     with st.container(border=True):
-        paciente = st.text_input("Nome do Paciente", "João da Silva")
-        med_prescrito = st.selectbox("Prescrever Medicamento", ["Amoxicilina 500mg", "Insulina Glargina", "Reagente PCR-X"])
-        
-        if st.button("🚀 Enviar Prescrição (Padrão FHIR)"):
-            # Gerando o JSON HL7 FHIR
-            fhir_data = {
-                "resourceType": "MedicationRequest",
-                "subject": {"display": paciente},
-                "medicationReference": {"display": med_prescrito}
-            }
-            
-            # LÓGICA DE INTERCEPTAÇÃO (O que a API faria)
-            idx = st.session_state.estoque[
-                (st.session_state.estoque['Produto'] == med_prescrito) & 
-                (st.session_state.estoque['Status'] == 'Disponível')
-            ].index
-            
-            if not idx.empty:
-                st.session_state.estoque.at[idx[0], 'Status'] = f"RESERVADO: {paciente}"
-                st.session_state.logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] {med_prescrito} reservado para {paciente}")
-                st.success("Enviado com Sucesso!")
-            else:
-                st.error("Erro: Produto sem estoque!")
-
-# --- COLUNA 2: A FARMÁCIA/LAB (RECEPTOR) ---
-with col_farmacia:
-    st.header("📦 Dashboard da Unidade")
+        st.warning("Previsão: Geladeira 02 subirá para 6°C em 2h (Falha de Compressor).")
+        if st.button("Acionar Manutenção Preditiva"):
+            st.info("Ticket aberto com a assistência técnica.")
     
-    tab1, tab2 = st.tabs(["Estoque RFID", "Logs de Integração"])
-    
-    with tab1:
-        st.write("Monitoramento de Prateleiras em Tempo Real")
-        st.table(st.session_state.estoque)
-        
-    with tab2:
-        for log in reversed(st.session_state.logs):
-            st.info(log)
+    with st.container(border=True):
+        st.error("Validade Crítica: Reagente Bio-X vence em 48h.")
+        st.button("Promover Desconto/Uso Prioritário")
 
-# Rodapé Técnico
+# --- CONFORMIDADE SANITÁRIA (FOOTER) ---
 st.divider()
-st.caption("Protótipo SaaS Indústria 4.0 - Interoperabilidade HL7 FHIR + RFID")
+if st.button("📄 Gerar Relatório para Vigilância Sanitária (Blockchain)"):
+    st.write("Gerando histórico imutável de temperatura e movimentação...")
+    st.download_button("Baixar PDF Autenticado", "Dados de auditoria...", "relatorio_conformidade.pdf")
