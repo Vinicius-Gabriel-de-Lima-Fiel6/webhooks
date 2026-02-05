@@ -1,72 +1,42 @@
 import streamlit as st
+from streamlit_drawable_canvas import st_canvas # pip install streamlit-drawable-canvas
+from PIL import Image
 import pandas as pd
-import time
-from datetime import datetime
 
-# CONFIGURAÇÃO DE INTERFACE INDUSTRIAL
-st.set_page_config(page_title="BioTech OS | Automação 4.0", layout="wide")
+st.set_page_config(layout="wide")
+st.title("🕹️ Painel de Controle Digital Twin 2D")
 
-# SIMULAÇÃO DE HARDWARE (BANCO DE DADOS DA UNIDADE)
-if 'dispositivos' not in st.session_state:
-    st.session_state.dispositivos = {
-        "Portal RFID": "Online",
-        "Geladeira Inteligente": "Online",
-        "Braço Robótico": "Standby"
-    }
+# 1. Imagem do Sistema (Simulando o diagrama do seu projeto físico)
+# Usando uma imagem de exemplo de um motor industrial
+img_url = "https://raw.githubusercontent.com"
 
-if 'estoque_interno' not in st.session_state:
-    st.session_state.estoque_interno = pd.DataFrame([
-        {"ID_RFID": "1001A", "Item": "Reagente Bio-X", "Local": "Gaveta 01", "Temp": "4.2°C", "Status": "Ok"},
-        {"ID_RFID": "1002B", "Item": "Vacina Gripe", "Local": "Geladeira 02", "Temp": "3.8°C", "Status": "Ok"},
-        {"ID_RFID": "1003C", "Item": "Insulina R", "Local": "Geladeira 02", "Temp": "4.0°C", "Status": "Ok"}
-    ])
+st.sidebar.info("Clique nas partes do motor para interagir com o hardware real.")
 
-# --- HEADER INDUSTRIAL ---
-st.title("📟 BioTech Operating System")
-st.subheader("Automação Interna de Farmácia e Laboratório")
+# 2. Configuração do Canvas (Interface Clicável)
+canvas_result = st_canvas(
+    fill_color="rgba(255, 165, 0, 0.3)",  # Cor do destaque ao clicar
+    stroke_width=3,
+    background_image=Image.open(st.download_button("Baixe a imagem base", img_url) if False else Image.new('RGB', (600, 400), (200,200,200))), # Simulação simplificada
+    update_streamlit=True,
+    height=400,
+    width=600,
+    drawing_mode="point", # Modo de clique em pontos
+    key="canvas",
+)
 
-# --- BARRA LATERAL: CONTROLE DE HARDWARE ---
-with st.sidebar:
-    st.header("⚙️ Status do Hardware")
-    for disp, status in st.session_state.dispositivos.items():
-        st.status(f"{disp}: {status}", state="complete" if status == "Online" else "error")
-    
-    st.divider()
-    st.header("📥 Entrada de Matéria-Prima")
-    if st.button("Escanear Novo Lote (RFID)"):
-        with st.spinner("Processando XML da NFe e IDs RFID..."):
-            time.sleep(2)
-            st.success("Lote Integrado com Sucesso!")
+# 3. Mapeamento de Coordenadas (Onde estão os botões na sua imagem?)
+# Exemplo: Motor (x: 100-300, y: 100-300)
+if canvas_result.json_data is not None:
+    objects = canvas_result.json_data["objects"]
+    if objects:
+        pos = objects[-1] # Pega o último clique
+        x, y = pos["left"], pos["top"]
+        
+        st.sidebar.write(f"Coordenadas do clique: X={x}, Y={y}")
 
-# --- CORPO PRINCIPAL: OPERAÇÃO AUTÔNOMA ---
-col_mapa, col_alertas = st.columns([2, 1])
-
-with col_mapa:
-    st.write("### 📍 Rastreabilidade Interna em Tempo Real")
-    # Aqui o diferencial: Monitoramento de temperatura POR ITEM
-    st.dataframe(st.session_state.estoque_interno, use_container_width=True)
-    
-    if st.button("Executar Inventário Cego Autônomo"):
-        st.write("🤖 Robô iniciando varredura de prateleiras...")
-        bar = st.progress(0)
-        for i in range(100):
-            time.sleep(0.02)
-            bar.progress(i + 1)
-        st.success("Inventário concluído: 100% de acurácia entre Físico vs Sistema.")
-
-with col_alertas:
-    st.write("### ⚠️ Gestão de Riscos (IA)")
-    with st.container(border=True):
-        st.warning("Previsão: Geladeira 02 subirá para 6°C em 2h (Falha de Compressor).")
-        if st.button("Acionar Manutenção Preditiva"):
-            st.info("Ticket aberto com a assistência técnica.")
-    
-    with st.container(border=True):
-        st.error("Validade Crítica: Reagente Bio-X vence em 48h.")
-        st.button("Promover Desconto/Uso Prioritário")
-
-# --- CONFORMIDADE SANITÁRIA (FOOTER) ---
-st.divider()
-if st.button("📄 Gerar Relatório para Vigilância Sanitária (Blockchain)"):
-    st.write("Gerando histórico imutável de temperatura e movimentação...")
-    st.download_button("Baixar PDF Autenticado", "Dados de auditoria...", "relatorio_conformidade.pdf")
+        # LÓGICA DE CONTROLE REAL
+        if 150 < x < 450 and 100 < y < 300: # Se clicou no corpo do motor
+            st.success("🔥 Comando Enviado: Iniciando Ciclo do Motor!")
+            # Aqui você inseriria o comando MQTT: client.publish("motor/power", "ON")
+        elif x < 100:
+            st.warning("🛠️ Abrindo Painel de Manutenção...")
